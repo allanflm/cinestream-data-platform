@@ -1,0 +1,19 @@
+# Dados brutos (baixar conforme o README)
+data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Variáveis de ambiente
+.env
+
+# Editores e sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Power BI: arquivos temporários
+*.pbix.bak

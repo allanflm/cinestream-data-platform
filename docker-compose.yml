@@ -1,0 +1,14 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: cinestream-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "CineStream@2026"
+    ports:
+      - "1433:1433"
+    volumes:
+      - cinestream-data:/var/opt/mssql
+
+volumes:
+  cinestream-data:
