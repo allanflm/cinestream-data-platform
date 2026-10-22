@@ -56,20 +56,18 @@ cinestream-data-platform/
 
 ## Como reproduzir
 
-**Pré-requisitos:** Docker Desktop, Python 3.11+, [ODBC Driver 18 for SQL Server](https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server).
+**Pré-requisitos:** Docker Desktop, Python 3.11+, [ODBC Driver 18 for SQL Server](https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server) e PowerShell 7.
 
-1. Suba o SQL Server:
-   ```bash
-   docker compose up -d
+1. Suba o ambiente (Docker, `.venv` e SQL Server) com um comando:
+   ```powershell
+   .\dev.ps1          # para desligar: .\dev.ps1 down
    ```
 2. Crie o banco executando `sql/01_create_schema.sql` (conectado em `master`).
-3. Baixe o [MovieLens ml-latest-small](https://grouplens.org/datasets/movielens/latest/) e descompacte em `data/movielens/`.
-4. Carregue o catálogo:
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate          # Windows
-   pip install -r requirements.txt
+3. Baixe o [MovieLens ml-latest-small](https://grouplens.org/datasets/movielens/latest/) e descompacte em `data/movielens/` (são usados `movies.csv` e `ratings.csv`).
+4. Carregue o catálogo e simule a operação:
+   ```powershell
    python data_generator/01_load_movielens.py
+   python data_generator/02_simulate_platform.py
    ```
 
 > A senha do `docker-compose.yml` é apenas para o ambiente local de desenvolvimento.
@@ -80,7 +78,7 @@ cinestream-data-platform/
 - [x] 1. Ambiente (SQL Server em Docker)
 - [x] 2. Modelagem da origem
 - [x] 3. Catálogo de filmes (9.742 filmes do MovieLens)
-- [ ] 4. Simulação de usuários, assinaturas e sessões
+- [x] 4. Simulação de usuários, assinaturas e sessões (2,2 milhões de sessões)
 - [ ] 5. Ingestão no Databricks
 - [ ] 6–8. Bronze → Silver → Gold
 - [ ] 9. Orquestração e CI/CD

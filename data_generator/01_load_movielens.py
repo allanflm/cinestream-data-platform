@@ -13,33 +13,19 @@ Uso (na raiz do projeto, com o .venv ativo):
 """
 
 import re
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import URL
+from sqlalchemy import text
+
+from db import MOVIELENS_DIR, get_engine, reset_identity
 
 # ---------------------------------------------------------------------
 # Configuração
 # ---------------------------------------------------------------------
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MOVIES_CSV = PROJECT_ROOT / "data" / "movielens" / "movies.csv"
+MOVIES_CSV = MOVIELENS_DIR / "movies.csv"
 
 SEED = 42
-
-CONNECTION_URL = URL.create(
-    "mssql+pyodbc",
-    username="sa",
-    password="CineStream@2026",  # mesma senha do docker-compose.yml
-    host="localhost",
-    port=1433,
-    database="CineStream",
-    query={
-        "driver": "ODBC Driver 18 for SQL Server",
-        "TrustServerCertificate": "yes",
-    },
-)
 
 # Duração média (min) por gênero; filmes com vários gêneros usam a média deles
 GENRE_AVG_DURATION = {
@@ -123,7 +109,7 @@ def build_dataframes(movies_raw: pd.DataFrame):
 # Carga
 # ---------------------------------------------------------------------
 def load(movies: pd.DataFrame, genres: pd.DataFrame, movie_genres: pd.DataFrame) -> None:
-    engine = create_engine(CONNECTION_URL, fast_executemany=True)
+    engine = get_engine()
 
     with engine.begin() as conn:
         # Proteção: o catálogo não pode ser recarregado depois que existirem sessões/avaliações
@@ -140,7 +126,7 @@ def load(movies: pd.DataFrame, genres: pd.DataFrame, movie_genres: pd.DataFrame)
         conn.execute(text("DELETE FROM app.movie_genres"))
         conn.execute(text("DELETE FROM app.movies"))
         conn.execute(text("DELETE FROM app.genres"))
-        conn.execute(text("DBCC CHECKIDENT ('app.genres', RESEED, 0)"))
+        reset_identity(conn, "app.genres")
 
         genres.to_sql("genres", conn, schema="app", if_exists="append", index=False)
 
