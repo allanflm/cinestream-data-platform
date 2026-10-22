@@ -25,6 +25,11 @@ O projeto foi construído de trás para frente: primeiro o dashboard, depois as 
 
 **Problema encontrado:** o Docker Desktop exigia a feature *Virtual Machine Platform*. O comando `Enable-WindowsOptionalFeature` falhou no PowerShell 7 ("Classe não registrada"); resolvido com `dism.exe` + reinício do Windows + `wsl --update`.
 
+**Um comando para subir tudo:** `.\dev.ps1` abre o Docker Desktop se estiver fechado, cria o `.venv` se não existir e sobe o SQL Server, só liberando quando o banco passa no *healthcheck*. `.\dev.ps1 down` desliga. Uma tarefa do VS Code (`runOn: folderOpen`) roda o script ao abrir o projeto.
+
+- O caminho do Docker Desktop não era o padrão; o script usa `docker desktop start` (Docker 4.37+) e, como plano B, localiza o executável a partir do `docker.exe` no PATH.
+- Scripts `.ps1` baixados pelo navegador são bloqueados pela política de execução (marca "veio da internet"); resolvido com `Unblock-File`.
+
 ## Passo 2 — Modelagem da origem (OLTP)
 
 Banco `CineStream`, schema `app`, 9 tabelas: `plans`, `users`, `subscriptions`, `payments`, `genres`, `movies`, `movie_genres`, `viewing_sessions`, `ratings`.
@@ -55,6 +60,36 @@ Decisões:
 
 Script: `data_generator/01_load_movielens.py`
 
+**Bug encontrado depois:** `DBCC CHECKIDENT ... RESEED 0` numa tabela que nunca recebeu linhas faz o primeiro IDENTITY ser **0**, não 1, e os gêneros nasceram com `genre_id` começando em 0. Corrigido com uma função `reset_identity` (em `data_generator/db.py`) que só faz o reseed se a tabela já foi usada.
+
 ## Passo 4 — Simulação de usuários, assinaturas e sessões
+
+Histórico simulado de **jan/2025 a 21/out/2026**, com seed fixa (reprodutível).
+
+| Tabela | Linhas |
+|---|---|
+| users | 50.000 |
+| subscriptions | 57.905 (31.481 ativas) |
+| payments | 336.118 |
+| viewing_sessions | 2.227.099 |
+| ratings | 212.309 |
+
+Churn mensal médio de **5,9%** e taxa de conclusão de **54,8%**.
+
+Regras de negócio simuladas:
+
+1. **Crescimento com sazonalidade:** cadastros crescem ao longo do tempo, com picos em janeiro, julho e dezembro.
+2. **Churn decrescente com o tempo de casa:** ~9% no 1º mês, ~3,5% depois de um ano; maior no plano Básico e em quem assiste pouco.
+3. **Troca de plano** (3% por ciclo, 65% upgrades), **falha de pagamento** encerrando a assinatura (churn involuntário) e **reativação** de 15% de quem cancelou.
+4. **Sessões realistas:** pico às 21h, mais consumo no fim de semana e nas férias, TV com metade das sessões, cada usuário com aparelho e gêneros favoritos.
+5. **Sinal de churn:** quem vai cancelar assiste bem menos nos 30 dias anteriores.
+6. **Catálogo real orientando o consumo:** popularidade e qualidade de cada filme vêm das ~100 mil avaliações reais do MovieLens; filmes mal avaliados são mais abandonados, e no celular se abandona mais.
+7. **`created_at`/`updated_at` com a data real de cada evento**, e não a data da carga, para que a carga incremental faça sentido.
+
+Desempenho: a simulação leva ~20 s; a gravação leva ~6 min, quase tudo nas 2,2 milhões de sessões (`to_sql` + `fast_executemany`).
+
+Script: `data_generator/02_simulate_platform.py`
+
+## Passo 5 — Ingestão no Databricks
 
 _(em andamento)_
