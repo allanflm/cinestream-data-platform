@@ -9,8 +9,12 @@ __pycache__/
 # Variáveis de ambiente
 .env
 
+# VS Code: versiona só a configuração do projeto
+.vscode/*
+!.vscode/tasks.json
+!.vscode/settings.json
+
 # Editores e sistema
-.vscode/
 .idea/
 .DS_Store
 Thumbs.db
